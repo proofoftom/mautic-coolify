@@ -47,17 +47,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libkrb5-dev \
     # For PDF generation
     libfontconfig1 \
+    # For composer dependencies (Node.js/npm)
+    nodejs \
+    npm \
     # Cleanup
     && rm -rf /var/lib/apt/lists/*
 
 # Configure and install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+RUN echo "=== DIAGNOSTIC: Starting PHP extension configuration ===" \
+    && echo "PHP version:" && php -v \
+    && echo "Checking installed packages:" && dpkg -l | grep -E "(libjpeg|libpng|libfreetype|libc-client|libkrb5)" \
+    && echo "=== DIAGNOSTIC: Configuring gd extension ===" \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg 2>&1 | tee /tmp/gd-configure.log \
+    && echo "=== DIAGNOSTIC: GD configure completed, checking log ===" \
+    && cat /tmp/gd-configure.log \
+    && echo "=== DIAGNOSTIC: Installing PHP extensions ===" \
     && docker-php-ext-install -j$(nproc) \
         bcmath \
         exif \
         gd \
-        imap \
         intl \
         mbstring \
         mysqli \
@@ -65,8 +73,16 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo_mysql \
         xsl \
         zip \
-    && pecl install apcu redis \
-    && docker-php-ext-enable apcu redis
+    2>&1 | tee /tmp/ext-install.log \
+    && echo "=== DIAGNOSTIC: PHP extensions installed, checking log ===" \
+    && cat /tmp/ext-install.log \
+    && echo "=== DIAGNOSTIC: Installing PECL extensions (imap, apcu, redis) ===" \
+    && pecl install imap apcu redis 2>&1 | tee /tmp/pecl-install.log \
+    && echo "=== DIAGNOSTIC: PECL extensions installed, checking log ===" \
+    && cat /tmp/pecl-install.log \
+    && echo "=== DIAGNOSTIC: Enabling extensions ===" \
+    && docker-php-ext-enable imap apcu redis \
+    && echo "=== DIAGNOSTIC: All PHP extensions configured and installed successfully ==="
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- \
@@ -100,7 +116,8 @@ RUN mkdir -p /var/www/.composer && chown -R www-data:www-data /var/www
 WORKDIR ${MAUTIC_ROOT}
 
 # Clone Mautic from repository (supports tags, branches, or dev versions)
-RUN if echo "${MAUTIC_VERSION}" | grep -q "^dev-"; then \
+RUN git config --global --add safe.directory /var/www/html \
+    && if echo "${MAUTIC_VERSION}" | grep -q "^dev-"; then \
         BRANCH=$(echo "${MAUTIC_VERSION}" | sed 's/^dev-//'); \
         git clone --depth 1 --branch ${BRANCH} ${MAUTIC_REPO} .; \
     else \
