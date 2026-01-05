@@ -74,8 +74,8 @@ services:
       # Container role
       DOCKER_MAUTIC_ROLE: 'mautic_web'
       
-      # Mautic URL (set by Coolify)
-      MAUTIC_URL: '${SERVICE_FQDN_MAUTIC_80:-http://localhost}'
+      # Mautic URL (set by Coolify) - must use SERVICE_URL for full https:// prefix
+      MAUTIC_URL: '${SERVICE_URL_MAUTIC_WEB:-http://localhost}'
       
       # Database configuration
       MAUTIC_DB_HOST: 'mysql'
