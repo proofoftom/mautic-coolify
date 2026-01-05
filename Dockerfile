@@ -107,7 +107,17 @@ RUN { \
 } > /usr/local/etc/php/conf.d/mautic.ini
 
 # Configure Apache
-RUN a2enmod rewrite headers
+RUN a2enmod rewrite headers setenvif
+
+# Configure Apache to trust proxy headers (fix redirect loops behind Traefik/reverse proxy)
+RUN { \
+    echo '<IfModule mod_setenvif.c>'; \
+    echo '    # Trust X-Forwarded-Proto from reverse proxy'; \
+    echo '    SetEnvIf X-Forwarded-Proto "https" HTTPS=on'; \
+    echo '    SetEnvIf X-Forwarded-Proto "https" HTTP_X_FORWARDED_PROTO=https'; \
+    echo '</IfModule>'; \
+} > /etc/apache2/conf-available/reverse-proxy.conf \
+    && a2enconf reverse-proxy
 
 # Create www-data user home directory
 RUN mkdir -p /var/www/.composer && chown -R www-data:www-data /var/www
