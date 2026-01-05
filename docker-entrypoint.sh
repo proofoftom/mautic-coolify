@@ -96,13 +96,37 @@ EOF
     fi
 }
 
-# Run database migrations
+# Run database migrations or install
 run_migrations() {
     if [ "${DOCKER_MAUTIC_RUN_MIGRATIONS:-false}" = "true" ]; then
-        log_info "Running database migrations..."
-        su-exec www-data php "${MAUTIC_ROOT}/bin/console" doctrine:migrations:migrate --no-interaction || {
-            log_warn "Migrations failed or already applied"
-        }
+        # Check if Mautic is already installed by checking for tables
+        if ! php -r "
+            \$host = getenv('MAUTIC_DB_HOST') ?: 'mysql';
+            \$port = getenv('MAUTIC_DB_PORT') ?: 3306;
+            \$user = getenv('MAUTIC_DB_USER') ?: 'mautic';
+            \$pass = getenv('MAUTIC_DB_PASSWORD') ?: '';
+            \$db = getenv('MAUTIC_DB_DATABASE') ?: 'mautic';
+
+            try {
+                \$pdo = new PDO(\"mysql:host=\$host;port=\$port;dbname=\$db\", \$user, \$pass);
+                \$result = \$pdo->query(\"SHOW TABLES LIKE 'users'\");
+                exit(\$result && \$result->rowCount() > 0 ? 0 : 1);
+            } catch (Exception \$e) {
+                exit(1);
+            }
+        " 2>/dev/null; then
+            log_info "Fresh install detected - running Mautic installation..."
+            su-exec www-data php "${MAUTIC_ROOT}/bin/console" mautic:install --force --no-interaction || {
+                log_error "Mautic installation failed"
+                return 1
+            }
+            log_info "Mautic installation completed"
+        else
+            log_info "Existing installation detected - running database migrations..."
+            su-exec www-data php "${MAUTIC_ROOT}/bin/console" doctrine:migrations:migrate --no-interaction || {
+                log_warn "Migrations failed or already applied"
+            }
+        fi
     fi
 }
 
