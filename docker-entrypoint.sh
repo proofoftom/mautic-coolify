@@ -116,11 +116,26 @@ run_migrations() {
             }
         " 2>/dev/null; then
             log_info "Fresh install detected - running Mautic installation..."
-            gosu www-data php "${MAUTIC_ROOT}/bin/console" mautic:install --force --no-interaction || {
+            gosu www-data php "${MAUTIC_ROOT}/bin/console" mautic:install \
+                "${MAUTIC_URL:-http://localhost}" \
+                --force \
+                --no-interaction \
+                --db_driver=pdo_mysql \
+                --db_host="${MAUTIC_DB_HOST:-mysql}" \
+                --db_port="${MAUTIC_DB_PORT:-3306}" \
+                --db_name="${MAUTIC_DB_DATABASE:-mautic}" \
+                --db_user="${MAUTIC_DB_USER:-mautic}" \
+                --db_password="${MAUTIC_DB_PASSWORD}" \
+                --admin_email="admin@localhost.local" \
+                --admin_password="Mautic1234!" \
+                --admin_firstname="Admin" \
+                --admin_lastname="User" \
+                --admin_username="admin" || {
                 log_error "Mautic installation failed"
                 return 1
             }
             log_info "Mautic installation completed"
+            log_info "Default admin credentials: admin / Mautic1234!"
         else
             log_info "Existing installation detected - running database migrations..."
             gosu www-data php "${MAUTIC_ROOT}/bin/console" doctrine:migrations:migrate --no-interaction || {

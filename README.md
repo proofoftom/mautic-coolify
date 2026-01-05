@@ -93,6 +93,11 @@ docker compose logs -f mautic_web
 
 4. **Deploy**: Click Deploy in Coolify
 
+5. **First Login**: After deployment completes, login with default credentials:
+   - Username: `admin`
+   - Password: `Mautic1234!`
+   - **Change the password immediately after first login!**
+
 ## 🔧 Configuration
 
 ### Environment Variables
