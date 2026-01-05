@@ -1,0 +1,11 @@
+# Custom Scripts
+#
+# Add custom startup or utility scripts here.
+# They will be copied to /opt/mautic/scripts/ in the container.
+#
+# Example scripts:
+# - backup.sh: Database backup script
+# - import-data.sh: Import contacts or data
+# - custom-cron.sh: Additional cron tasks
+#
+# Scripts are made executable during build.

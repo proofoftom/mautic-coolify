@@ -1,0 +1,21 @@
+# Custom Mautic Plugins
+# 
+# Add your custom Mautic plugins here. They will be copied into the
+# container during the Docker build process.
+#
+# Plugin Structure:
+# plugins/
+# ├── YourPluginBundle/
+# │   ├── Config/
+# │   │   └── config.php
+# │   ├── Controller/
+# │   ├── Entity/
+# │   ├── Form/
+# │   ├── Views/
+# │   └── YourPluginBundle.php
+#
+# Alternatively, install plugins via Composer by editing the Dockerfile:
+#
+#   RUN composer require vendor/plugin-name:^1.0 --no-update
+#
+# For marketplace plugins, see: https://www.mautic.org/marketplace

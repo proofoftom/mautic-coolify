@@ -1,0 +1,207 @@
+# Mautic Custom Docker Compose for Coolify
+# 
+# This compose file builds and deploys a custom Mautic 7.0.0-rc2 image
+# with support for custom plugins and themes.
+#
+# For Coolify Service Stack deployment:
+# 1. Push this repo to GitHub
+# 2. In Coolify, create a new Service from Docker Compose
+# 3. Point to your repository
+# 4. Configure environment variables in Coolify UI
+
+services:
+  # MySQL Database
+  mysql:
+    image: 'mysql:lts'
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: '${SERVICE_PASSWORD_64_MYSQLROOT}'
+      MYSQL_DATABASE: '${MYSQL_DATABASE:-mautic}'
+      MYSQL_USER: '${SERVICE_USER_MYSQL}'
+      MYSQL_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+    volumes:
+      - 'mysql-data:/var/lib/mysql'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '--silent', '--user=root', '--password=${SERVICE_PASSWORD_64_MYSQLROOT}']
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mautic-network
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: 'rabbitmq:3-management'
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_VHOST: '${RABBITMQ_DEFAULT_VHOST:-mautic}'
+      RABBITMQ_DEFAULT_USER: '${RABBITMQ_USER:-mautic}'
+      RABBITMQ_DEFAULT_PASS: '${RABBITMQ_PASSWORD:-mautic}'
+    volumes:
+      - 'rabbitmq-data:/var/lib/rabbitmq'
+    healthcheck:
+      test: 'rabbitmq-diagnostics -q ping'
+      interval: 10s
+      timeout: 30s
+      retries: 5
+    networks:
+      - mautic-network
+
+  # Custom Mautic Web Application
+  mautic_web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAUTIC_VERSION: '${MAUTIC_VERSION:-7.0.0-beta}'
+        # Uncomment to build from your fork:
+        # MAUTIC_REPO: 'https://github.com/proofoftom/mautic.git'
+        BASE_TAG: '8.4-apache-bookworm'
+    image: '${MAUTIC_IMAGE:-mautic-custom:7.0.0-rc2}'
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - 'mautic-config:/var/www/html/app/config:z'
+      - 'mautic-logs:/var/www/html/var/logs:z'
+      - 'mautic-media:/var/www/html/media:z'
+      - 'mautic-cache:/var/www/html/var/cache:z'
+    environment:
+      # Container role
+      DOCKER_MAUTIC_ROLE: 'mautic_web'
+      
+      # Mautic URL (set by Coolify)
+      MAUTIC_URL: '${SERVICE_FQDN_MAUTIC_80:-http://localhost}'
+      
+      # Database configuration
+      MAUTIC_DB_HOST: 'mysql'
+      MAUTIC_DB_PORT: '3306'
+      MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
+      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL}'
+      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      
+      # Message queue (RabbitMQ)
+      MAUTIC_MESSENGER_DSN_EMAIL: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
+      MAUTIC_MESSENGER_DSN_HIT: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
+      
+      # Optional: Enable migrations on first start
+      DOCKER_MAUTIC_RUN_MIGRATIONS: '${MAUTIC_RUN_MIGRATIONS:-true}'
+      
+      # Optional: Load test data (set to false for production)
+      DOCKER_MAUTIC_LOAD_TEST_DATA: '${MAUTIC_LOAD_TEST_DATA:-false}'
+      
+      # PHP settings (optional overrides)
+      PHP_INI_VALUE_MEMORY_LIMIT: '${PHP_MEMORY_LIMIT:-512M}'
+      PHP_INI_VALUE_UPLOAD_MAX_FILESIZE: '${PHP_UPLOAD_MAX_FILESIZE:-64M}'
+      PHP_INI_VALUE_POST_MAX_FILESIZE: '${PHP_POST_MAX_FILESIZE:-64M}'
+      PHP_INI_VALUE_MAX_EXECUTION_TIME: '${PHP_MAX_EXECUTION_TIME:-300}'
+      PHP_INI_VALUE_DATE_TIMEZONE: '${PHP_TIMEZONE:-UTC}'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost/']
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+    networks:
+      - mautic-network
+    labels:
+      # Coolify labels (these are typically auto-generated)
+      - 'coolify.managed=true'
+
+  # Mautic Cron Service (scheduled tasks)
+  mautic_cron:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAUTIC_VERSION: '${MAUTIC_VERSION:-7.0.0-beta}'
+        BASE_TAG: '8.4-apache-bookworm'
+    image: '${MAUTIC_IMAGE:-mautic-custom:7.0.0-rc2}'
+    restart: unless-stopped
+    depends_on:
+      mautic_web:
+        condition: service_healthy
+    volumes:
+      - 'mautic-config:/var/www/html/app/config:z'
+      - 'mautic-logs:/var/www/html/var/logs:z'
+      - 'mautic-media:/var/www/html/media:z'
+      - 'mautic-cache:/var/www/html/var/cache:z'
+    environment:
+      DOCKER_MAUTIC_ROLE: 'mautic_cron'
+      MAUTIC_DB_HOST: 'mysql'
+      MAUTIC_DB_PORT: '3306'
+      MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
+      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL}'
+      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      MAUTIC_MESSENGER_DSN_EMAIL: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
+      MAUTIC_MESSENGER_DSN_HIT: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
+    healthcheck:
+      test: ['CMD-SHELL', 'pgrep cron || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mautic-network
+
+  # Mautic Worker Service (message queue processing)
+  mautic_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MAUTIC_VERSION: '${MAUTIC_VERSION:-7.0.0-beta}'
+        BASE_TAG: '8.4-apache-bookworm'
+    image: '${MAUTIC_IMAGE:-mautic-custom:7.0.0-rc2}'
+    restart: unless-stopped
+    depends_on:
+      mautic_web:
+        condition: service_healthy
+    volumes:
+      - 'mautic-config:/var/www/html/app/config:z'
+      - 'mautic-logs:/var/www/html/var/logs:z'
+      - 'mautic-media:/var/www/html/media:z'
+      - 'mautic-cache:/var/www/html/var/cache:z'
+    environment:
+      DOCKER_MAUTIC_ROLE: 'mautic_worker'
+      MAUTIC_DB_HOST: 'mysql'
+      MAUTIC_DB_PORT: '3306'
+      MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
+      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL}'
+      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      MAUTIC_MESSENGER_DSN_EMAIL: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
+      MAUTIC_MESSENGER_DSN_HIT: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
+      # Worker counts
+      DOCKER_MAUTIC_WORKERS_CONSUME_EMAIL: '${MAUTIC_EMAIL_WORKERS:-2}'
+      DOCKER_MAUTIC_WORKERS_CONSUME_HIT: '${MAUTIC_HIT_WORKERS:-2}'
+      DOCKER_MAUTIC_WORKERS_CONSUME_FAILED: '${MAUTIC_FAILED_WORKERS:-1}'
+    healthcheck:
+      test: ['CMD-SHELL', 'pgrep -f messenger:consume || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mautic-network
+
+# Named volumes for data persistence
+volumes:
+  mysql-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+  mautic-config:
+    driver: local
+  mautic-logs:
+    driver: local
+  mautic-media:
+    driver: local
+  mautic-cache:
+    driver: local
+
+# Docker network
+networks:
+  mautic-network:
+    driver: bridge

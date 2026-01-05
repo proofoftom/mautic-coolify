@@ -1,0 +1,7 @@
+# Custom Cron Configuration
+#
+# Add custom cron scripts or override the default cron configuration.
+# Files are copied to /opt/mautic/cron/ in the container.
+#
+# The default cron jobs are configured in docker-entrypoint.sh.
+# You can add additional cron jobs here or modify the defaults.

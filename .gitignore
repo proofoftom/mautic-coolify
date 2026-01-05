@@ -1,0 +1,33 @@
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Docker volumes (if using bind mounts locally)
+data/
+mysql-data/
+rabbitmq-data/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Composer (optional - may want vendor in some setups)
+# vendor/
+
+# Node (if you add frontend build tools)
+node_modules/

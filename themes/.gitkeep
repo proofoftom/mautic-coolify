@@ -1,0 +1,31 @@
+# Custom Mautic Themes
+#
+# Add your custom Mautic themes here. They will be copied into the
+# container during the Docker build process.
+#
+# Theme Structure (Twig-based themes for Mautic 5+):
+# themes/
+# ├── YourTheme/
+# │   ├── config.json
+# │   ├── html/
+# │   │   ├── base.html.twig
+# │   │   ├── email.html.twig
+# │   │   ├── form.html.twig
+# │   │   ├── message.html.twig
+# │   │   └── page.html.twig
+# │   ├── assets/
+# │   │   ├── css/
+# │   │   ├── js/
+# │   │   └── images/
+# │   └── thumbnail.png
+#
+# Example config.json:
+# {
+#     "name": "Your Theme",
+#     "author": "Your Name",
+#     "authorUrl": "https://yoursite.com",
+#     "features": ["page", "email", "form"]
+# }
+#
+# For theme development documentation, see:
+# https://docs.mautic.org/en/latest/themes/
