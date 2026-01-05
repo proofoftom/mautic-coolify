@@ -85,7 +85,7 @@ docker compose logs -f mautic_web
 
 3. **Configure Environment Variables** in Coolify UI:
    ```
-   MAUTIC_VERSION=7.0.0-beta
+   MAUTIC_VERSION=7.0.0-rc2
    MAUTIC_RUN_MIGRATIONS=true
    MAUTIC_LOAD_TEST_DATA=false
    RABBITMQ_PASSWORD=your-secure-password
@@ -99,7 +99,7 @@ docker compose logs -f mautic_web
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAUTIC_VERSION` | `7.0.0-beta` | Mautic version to build |
+| `MAUTIC_VERSION` | `7.0.0-rc2` | Mautic version to build |
 | `MAUTIC_RUN_MIGRATIONS` | `true` | Run DB migrations on start |
 | `MAUTIC_LOAD_TEST_DATA` | `false` | Load demo data |
 | `MAUTIC_EMAIL_WORKERS` | `2` | Email queue workers |

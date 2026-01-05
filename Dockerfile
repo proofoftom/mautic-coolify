@@ -13,7 +13,7 @@ ARG BASE_TAG=8.4-apache-bookworm
 FROM php:${BASE_TAG}
 
 # Build arguments
-ARG MAUTIC_VERSION=7.0.0-beta
+ARG MAUTIC_VERSION=7.0.0-rc2
 ARG MAUTIC_REPO=https://github.com/mautic/mautic.git
 ARG COMPOSER_VERSION=2.7
 
