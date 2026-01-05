@@ -163,8 +163,8 @@ COPY supervisor/ /etc/supervisor/conf.d/
 
 # Set correct permissions
 RUN chown -R www-data:www-data ${MAUTIC_ROOT} \
-    && find ${MAUTIC_ROOT} -type d -exec chmod 755 {} \; \
-    && find ${MAUTIC_ROOT} -type f -exec chmod 644 {} \; \
+    && find ${MAUTIC_ROOT} -type d -exec chmod 755 {} + \
+    && find ${MAUTIC_ROOT} -type f -exec chmod 644 {} + \
     && chmod -R 775 ${MAUTIC_ROOT}/var \
     && chmod -R 775 ${MAUTIC_ROOT}/media \
     && chmod -R 775 ${MAUTIC_ROOT}/app/config
