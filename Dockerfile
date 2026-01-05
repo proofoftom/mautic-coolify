@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     unzip \
     supervisor \
+    gosu \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \

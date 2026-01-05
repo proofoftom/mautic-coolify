@@ -116,14 +116,14 @@ run_migrations() {
             }
         " 2>/dev/null; then
             log_info "Fresh install detected - running Mautic installation..."
-            su-exec www-data php "${MAUTIC_ROOT}/bin/console" mautic:install --force --no-interaction || {
+            gosu www-data php "${MAUTIC_ROOT}/bin/console" mautic:install --force --no-interaction || {
                 log_error "Mautic installation failed"
                 return 1
             }
             log_info "Mautic installation completed"
         else
             log_info "Existing installation detected - running database migrations..."
-            su-exec www-data php "${MAUTIC_ROOT}/bin/console" doctrine:migrations:migrate --no-interaction || {
+            gosu www-data php "${MAUTIC_ROOT}/bin/console" doctrine:migrations:migrate --no-interaction || {
                 log_warn "Migrations failed or already applied"
             }
         fi
@@ -134,7 +134,7 @@ run_migrations() {
 load_test_data() {
     if [ "${DOCKER_MAUTIC_LOAD_TEST_DATA:-false}" = "true" ]; then
         log_info "Loading test data..."
-        su-exec www-data php "${MAUTIC_ROOT}/bin/console" mautic:install:data --force || {
+        gosu www-data php "${MAUTIC_ROOT}/bin/console" mautic:install:data --force || {
             log_warn "Test data loading failed"
         }
     fi
@@ -143,8 +143,8 @@ load_test_data() {
 # Clear and warm up cache
 warm_cache() {
     log_info "Warming up cache..."
-    su-exec www-data php "${MAUTIC_ROOT}/bin/console" cache:clear --no-warmup
-    su-exec www-data php "${MAUTIC_ROOT}/bin/console" cache:warmup
+    gosu www-data php "${MAUTIC_ROOT}/bin/console" cache:clear --no-warmup
+    gosu www-data php "${MAUTIC_ROOT}/bin/console" cache:warmup
 }
 
 # Start cron jobs
