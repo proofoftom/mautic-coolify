@@ -58,41 +58,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure and install PHP extensions
-RUN echo "=== DIAGNOSTIC: Starting PHP extension configuration ===" \
-    && echo "PHP version:" && php -v \
-    && echo "Checking installed packages:" && dpkg -l | grep -E "(libjpeg|libpng|libfreetype|libc-client|libkrb5|librabbitmq)" \
-    && echo "=== DIAGNOSTIC: Configuring gd extension ===" \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg 2>&1 | tee /tmp/gd-configure.log \
-    && echo "=== DIAGNOSTIC: GD configure completed, checking log ===" \
-    && cat /tmp/gd-configure.log \
-    && echo "=== DIAGNOSTIC: Configuring imap extension ===" \
-    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl 2>&1 | tee /tmp/imap-configure.log \
-    && echo "=== DIAGNOSTIC: IMAP configure completed, checking log ===" \
-    && cat /tmp/imap-configure.log \
-    && echo "=== DIAGNOSTIC: Installing PHP extensions ===" \
-    && docker-php-ext-install -j$(nproc) \
-        bcmath \
-        exif \
-        gd \
-        imap \
-        intl \
-        mbstring \
-        mysqli \
-        opcache \
-        pdo_mysql \
-        sockets \
-        xsl \
-        zip \
-    2>&1 | tee /tmp/ext-install.log \
-    && echo "=== DIAGNOSTIC: PHP extensions installed, checking log ===" \
-    && cat /tmp/ext-install.log \
-    && echo "=== DIAGNOSTIC: Installing PECL extensions (apcu, redis, amqp) ===" \
-    && pecl install apcu redis amqp 2>&1 | tee /tmp/pecl-install.log \
-    && echo "=== DIAGNOSTIC: PECL extensions installed, checking log ===" \
-    && cat /tmp/pecl-install.log \
-    && echo "=== DIAGNOSTIC: Enabling extensions ===" \
-    && docker-php-ext-enable apcu redis amqp \
-    && echo "=== DIAGNOSTIC: All PHP extensions configured and installed successfully ==="
+# Configure GD extension
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+
+# Install GD extension
+RUN docker-php-ext-install -j$(nproc) gd
+
+# Install IMAP extension - requires separate configuration
+RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+    && docker-php-ext-install -j$(nproc) imap
+
+# Install other PHP extensions
+RUN docker-php-ext-install -j$(nproc) \
+    bcmath \
+    exif \
+    intl \
+    mbstring \
+    mysqli \
+    opcache \
+    pdo_mysql \
+    sockets \
+    xsl \
+    zip
+
+# Install PECL extensions
+RUN pecl install apcu redis amqp
+
+# Enable PECL extensions
+RUN docker-php-ext-enable apcu redis amqp
+
+# Verify all required extensions are installed
+RUN php -m | grep -E "^(gd|imap|intl|mbstring|mysqli|pdo_mysql|bcmath|zip|amqp|redis|apcu)$" | wc -l | grep -q "12" \
+    || (echo "Missing required PHP extensions" && php -m && exit 1)
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- \
