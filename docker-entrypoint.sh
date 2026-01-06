@@ -93,6 +93,7 @@ EOF
         
         chown www-data:www-data "$config_file"
         log_info "Configuration generated"
+        log_info "MAUTIC_URL is set to: ${MAUTIC_URL:-not set}"
     fi
 }
 
@@ -160,6 +161,10 @@ warm_cache() {
     log_info "Warming up cache..."
     gosu www-data php "${MAUTIC_ROOT}/bin/console" cache:clear --no-warmup
     gosu www-data php "${MAUTIC_ROOT}/bin/console" cache:warmup
+    log_info "Checking Mautic error log..."
+    if [ -f "${MAUTIC_ROOT}/var/logs/prod.log" ]; then
+        tail -n 20 "${MAUTIC_ROOT}/var/logs/prod.log" 2>/dev/null || true
+    fi
 }
 
 # Start cron jobs
@@ -236,9 +241,9 @@ main() {
     log_info "Starting Mautic container in role: ${DOCKER_MAUTIC_ROLE}"
     
     # Fix permissions
-    chown -R www-data:www-data "${MAUTIC_ROOT}/var" 2>/dev/null || true
-    chown -R www-data:www-data "${MAUTIC_ROOT}/media" 2>/dev/null || true
-    chown -R www-data:www-data "${MAUTIC_ROOT}/config" 2>/dev/null || true
+    chown -R www-data:www-data "${MAUTIC_ROOT}/var"
+    chown -R www-data:www-data "${MAUTIC_ROOT}/media"
+    chown -R www-data:www-data "${MAUTIC_ROOT}/config"
     
     case "${DOCKER_MAUTIC_ROLE}" in
         mautic_web)

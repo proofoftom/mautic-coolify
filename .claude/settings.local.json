@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__coolify__list_application_envs",
+      "mcp__coolify__get_application",
+      "mcp__coolify__get_application_logs",
+      "Bash(curl:*)",
+      "mcp__coolify__diagnose_app"
+    ]
+  }
+}

@@ -72,12 +72,13 @@ services:
       - 'mautic-media-files:/var/www/html/media/files:z'
       - 'mautic-media-images:/var/www/html/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
+      - 'mautic-sessions:/var/lib/php/sessions:z'
     environment:
       # Container role
       DOCKER_MAUTIC_ROLE: 'mautic_web'
       
       # Mautic URL (set by Coolify) - must use SERVICE_URL for full https:// prefix
-      MAUTIC_URL: '${SERVICE_URL_MAUTIC_WEB:-http://localhost}'
+      MAUTIC_URL: '${SERVICE_URL_MAUTIC_80:-http://localhost}'
       
       # Database configuration
       MAUTIC_DB_HOST: 'mysql'
@@ -137,7 +138,7 @@ services:
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       DOCKER_MAUTIC_ROLE: 'mautic_cron'
-      MAUTIC_URL: '${SERVICE_URL_MAUTIC_WEB:-http://localhost}'
+      MAUTIC_URL: '${SERVICE_URL_MAUTIC_80:-http://localhost}'
       MAUTIC_DB_HOST: 'mysql'
       MAUTIC_DB_PORT: '3306'
       MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
@@ -176,7 +177,7 @@ services:
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       DOCKER_MAUTIC_ROLE: 'mautic_worker'
-      MAUTIC_URL: '${SERVICE_URL_MAUTIC_WEB:-http://localhost}'
+      MAUTIC_URL: '${SERVICE_URL_MAUTIC_80:-http://localhost}'
       MAUTIC_DB_HOST: 'mysql'
       MAUTIC_DB_PORT: '3306'
       MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
@@ -211,6 +212,8 @@ volumes:
   mautic-media-images:
     driver: local
   mautic-cache:
+    driver: local
+  mautic-sessions:
     driver: local
 
 # Docker network
