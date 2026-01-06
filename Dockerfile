@@ -64,9 +64,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 # Install GD extension
 RUN docker-php-ext-install -j$(nproc) gd
 
-# Install IMAP extension - requires separate configuration
-RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
-    && docker-php-ext-install -j$(nproc) imap
+# Install IMAP extension via PECL (not bundled in PHP 8.4)
+RUN pecl install imap \
+    && docker-php-ext-enable imap
 
 # Install other PHP extensions
 RUN docker-php-ext-install -j$(nproc) \
