@@ -88,7 +88,7 @@ RUN pecl install apcu redis amqp
 RUN docker-php-ext-enable apcu redis amqp
 
 # Verify all required extensions are installed
-RUN php -m | grep -E "^(gd|imap|intl|mbstring|mysqli|pdo_mysql|bcmath|zip|amqp|redis|apcu)$" | wc -l | grep -q "12" \
+RUN php -m | grep -E "^(gd|imap|intl|mbstring|mysqli|pdo_mysql|bcmath|zip|amqp|redis|apcu)$" | wc -l | grep -q "11" \
     || (echo "Missing required PHP extensions" && php -m && exit 1)
 
 # Install Composer
