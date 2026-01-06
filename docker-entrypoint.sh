@@ -64,7 +64,7 @@ wait_for_db() {
 
 # Generate local.php configuration if it doesn't exist
 generate_config() {
-    local config_file="${MAUTIC_ROOT}/app/config/local.php"
+    local config_file="${MAUTIC_ROOT}/config/local.php"
     
     if [ ! -f "$config_file" ] && [ -n "$MAUTIC_DB_HOST" ]; then
         log_info "Generating Mautic configuration..."
@@ -84,8 +84,8 @@ generate_config() {
     'site_url' => '${MAUTIC_URL:-http://localhost}',
     'cache_path' => '%kernel.project_dir%/var/cache',
     'log_path' => '%kernel.project_dir%/var/logs',
-    'image_path' => 'media/images',
-    'upload_dir' => '%kernel.project_dir%/media/files',
+    'image_path' => 'docroot/media/images',
+    'upload_dir' => '%kernel.project_dir%/docroot/media/files',
     'tmp_path' => '%kernel.project_dir%/var/tmp',
     'secret_key' => '${MAUTIC_SECRET_KEY:-$(openssl rand -hex 32)}',
 ];
@@ -237,8 +237,8 @@ main() {
     
     # Fix permissions
     chown -R www-data:www-data "${MAUTIC_ROOT}/var" 2>/dev/null || true
-    chown -R www-data:www-data "${MAUTIC_ROOT}/media" 2>/dev/null || true
-    chown -R www-data:www-data "${MAUTIC_ROOT}/app/config" 2>/dev/null || true
+    chown -R www-data:www-data "${MAUTIC_ROOT}/docroot/media" 2>/dev/null || true
+    chown -R www-data:www-data "${MAUTIC_ROOT}/config" 2>/dev/null || true
     
     case "${DOCKER_MAUTIC_ROLE}" in
         mautic_web)
@@ -246,6 +246,7 @@ main() {
             generate_config
             run_migrations
             load_test_data
+            warm_cache
             log_info "Starting Apache..."
             exec "$@"
             ;;

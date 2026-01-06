@@ -25,7 +25,8 @@ LABEL maintainer="Your Name <your@email.com>" \
 ENV MAUTIC_VERSION=${MAUTIC_VERSION} \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_HOME=/tmp/composer \
-    MAUTIC_ROOT=/var/www/html
+    MAUTIC_ROOT=/var/www/html \
+    APACHE_DOCUMENT_ROOT=/var/www/html/docroot
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -46,6 +47,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libc-client-dev \
     libkrb5-dev \
+    # For AMQP extension (RabbitMQ)
+    librabbitmq-dev \
     # For PDF generation
     libfontconfig1 \
     # For composer dependencies (Node.js/npm)
@@ -57,32 +60,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Configure and install PHP extensions
 RUN echo "=== DIAGNOSTIC: Starting PHP extension configuration ===" \
     && echo "PHP version:" && php -v \
-    && echo "Checking installed packages:" && dpkg -l | grep -E "(libjpeg|libpng|libfreetype|libc-client|libkrb5)" \
+    && echo "Checking installed packages:" && dpkg -l | grep -E "(libjpeg|libpng|libfreetype|libc-client|libkrb5|librabbitmq)" \
     && echo "=== DIAGNOSTIC: Configuring gd extension ===" \
     && docker-php-ext-configure gd --with-freetype --with-jpeg 2>&1 | tee /tmp/gd-configure.log \
     && echo "=== DIAGNOSTIC: GD configure completed, checking log ===" \
     && cat /tmp/gd-configure.log \
+    && echo "=== DIAGNOSTIC: Configuring imap extension ===" \
+    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl 2>&1 | tee /tmp/imap-configure.log \
+    && echo "=== DIAGNOSTIC: IMAP configure completed, checking log ===" \
+    && cat /tmp/imap-configure.log \
     && echo "=== DIAGNOSTIC: Installing PHP extensions ===" \
     && docker-php-ext-install -j$(nproc) \
         bcmath \
         exif \
         gd \
+        imap \
         intl \
         mbstring \
         mysqli \
         opcache \
         pdo_mysql \
+        sockets \
         xsl \
         zip \
     2>&1 | tee /tmp/ext-install.log \
     && echo "=== DIAGNOSTIC: PHP extensions installed, checking log ===" \
     && cat /tmp/ext-install.log \
-    && echo "=== DIAGNOSTIC: Installing PECL extensions (imap, apcu, redis) ===" \
-    && pecl install imap apcu redis 2>&1 | tee /tmp/pecl-install.log \
+    && echo "=== DIAGNOSTIC: Installing PECL extensions (apcu, redis, amqp) ===" \
+    && pecl install apcu redis amqp 2>&1 | tee /tmp/pecl-install.log \
     && echo "=== DIAGNOSTIC: PECL extensions installed, checking log ===" \
     && cat /tmp/pecl-install.log \
     && echo "=== DIAGNOSTIC: Enabling extensions ===" \
-    && docker-php-ext-enable imap apcu redis \
+    && docker-php-ext-enable apcu redis amqp \
     && echo "=== DIAGNOSTIC: All PHP extensions configured and installed successfully ==="
 
 # Install Composer
@@ -119,6 +128,19 @@ RUN { \
     echo '</IfModule>'; \
 } > /etc/apache2/conf-available/reverse-proxy.conf \
     && a2enconf reverse-proxy
+
+# Configure Apache DocumentRoot for Mautic (CRITICAL FIX)
+RUN { \
+    echo '<VirtualHost *:80>'; \
+    echo '    DocumentRoot /var/www/html/docroot'; \
+    echo '    <Directory /var/www/html/docroot>'; \
+    echo '        AllowOverride All'; \
+    echo '        Require all granted'; \
+    echo '    </Directory>'; \
+    echo '</VirtualHost>'; \
+} > /etc/apache2/sites-available/mautic.conf \
+    && a2dissite 000-default.conf \
+    && a2ensite mautic.conf
 
 # Create www-data user home directory
 RUN mkdir -p /var/www/.composer && chown -R www-data:www-data /var/www
@@ -162,13 +184,13 @@ RUN chmod +x /opt/mautic/cron/*.sh 2>/dev/null || true
 # Copy supervisor configuration
 COPY supervisor/ /etc/supervisor/conf.d/
 
-# Set correct permissions
+# Set correct permissions (FIXED for Mautic 7.x structure)
 RUN chown -R www-data:www-data ${MAUTIC_ROOT} \
     && find ${MAUTIC_ROOT} -type d -exec chmod 755 {} + \
     && find ${MAUTIC_ROOT} -type f -exec chmod 644 {} + \
     && chmod -R 775 ${MAUTIC_ROOT}/var \
-    && chmod -R 775 ${MAUTIC_ROOT}/media \
-    && chmod -R 775 ${MAUTIC_ROOT}/app/config
+    && chmod -R 775 ${MAUTIC_ROOT}/docroot/media \
+    && chmod -R 775 ${MAUTIC_ROOT}/config
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
@@ -177,12 +199,12 @@ RUN chmod +x /docker-entrypoint.sh
 # Expose port
 EXPOSE 80
 
-# Define volumes for persistence
-VOLUME ["${MAUTIC_ROOT}/app/config", "${MAUTIC_ROOT}/var/logs", "${MAUTIC_ROOT}/media"]
+# Define volumes for persistence (FIXED for Mautic 7.x structure)
+VOLUME ["${MAUTIC_ROOT}/config", "${MAUTIC_ROOT}/var/logs", "${MAUTIC_ROOT}/docroot/media/files", "${MAUTIC_ROOT}/docroot/media/images"]
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
+# Health check (IMPROVED with specific endpoint)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost/s/login || curl -f http://localhost/ || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["apache2-foreground"]

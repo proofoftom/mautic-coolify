@@ -13,12 +13,13 @@ services:
   # MySQL Database
   mysql:
     image: 'mysql:lts'
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci --sql-mode=""
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: '${SERVICE_PASSWORD_64_MYSQLROOT}'
+      MYSQL_ROOT_PASSWORD: '${SERVICE_PASSWORD_64_MYSQLROOT:-mautic}'
       MYSQL_DATABASE: '${MYSQL_DATABASE:-mautic}'
-      MYSQL_USER: '${SERVICE_USER_MYSQL}'
-      MYSQL_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      MYSQL_USER: '${SERVICE_USER_MYSQL:-mautic}'
+      MYSQL_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL:-mautic}'
     volumes:
       - 'mysql-data:/var/lib/mysql'
     healthcheck:
@@ -66,9 +67,10 @@ services:
       rabbitmq:
         condition: service_healthy
     volumes:
-      - 'mautic-config:/var/www/html/app/config:z'
+      - 'mautic-config:/var/www/html/config:z'
       - 'mautic-logs:/var/www/html/var/logs:z'
-      - 'mautic-media:/var/www/html/media:z'
+      - 'mautic-media-files:/var/www/html/docroot/media/files:z'
+      - 'mautic-media-images:/var/www/html/docroot/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       # Container role
@@ -81,8 +83,8 @@ services:
       MAUTIC_DB_HOST: 'mysql'
       MAUTIC_DB_PORT: '3306'
       MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
-      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL}'
-      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL:-mautic}'
+      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL:-mautic}'
       
       # Message queue (RabbitMQ)
       MAUTIC_MESSENGER_DSN_EMAIL: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
@@ -101,11 +103,11 @@ services:
       PHP_INI_VALUE_MAX_EXECUTION_TIME: '${PHP_MAX_EXECUTION_TIME:-300}'
       PHP_INI_VALUE_DATE_TIMEZONE: '${PHP_TIMEZONE:-UTC}'
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost/']
+      test: ['CMD', 'curl', '-f', 'http://localhost/s/login']
       interval: 30s
       timeout: 10s
-      start_period: 120s
-      retries: 5
+      start_period: 180s
+      retries: 10
     networks:
       - mautic-network
     labels:
@@ -125,18 +127,22 @@ services:
     depends_on:
       mautic_web:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
-      - 'mautic-config:/var/www/html/app/config:z'
+      - 'mautic-config:/var/www/html/config:z'
       - 'mautic-logs:/var/www/html/var/logs:z'
-      - 'mautic-media:/var/www/html/media:z'
+      - 'mautic-media-files:/var/www/html/docroot/media/files:z'
+      - 'mautic-media-images:/var/www/html/docroot/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       DOCKER_MAUTIC_ROLE: 'mautic_cron'
+      MAUTIC_URL: '${SERVICE_URL_MAUTIC_WEB:-http://localhost}'
       MAUTIC_DB_HOST: 'mysql'
       MAUTIC_DB_PORT: '3306'
       MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
-      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL}'
-      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL:-mautic}'
+      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL:-mautic}'
       MAUTIC_MESSENGER_DSN_EMAIL: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
       MAUTIC_MESSENGER_DSN_HIT: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
     healthcheck:
@@ -160,18 +166,22 @@ services:
     depends_on:
       mautic_web:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
-      - 'mautic-config:/var/www/html/app/config:z'
+      - 'mautic-config:/var/www/html/config:z'
       - 'mautic-logs:/var/www/html/var/logs:z'
-      - 'mautic-media:/var/www/html/media:z'
+      - 'mautic-media-files:/var/www/html/docroot/media/files:z'
+      - 'mautic-media-images:/var/www/html/docroot/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       DOCKER_MAUTIC_ROLE: 'mautic_worker'
+      MAUTIC_URL: '${SERVICE_URL_MAUTIC_WEB:-http://localhost}'
       MAUTIC_DB_HOST: 'mysql'
       MAUTIC_DB_PORT: '3306'
       MAUTIC_DB_DATABASE: '${MYSQL_DATABASE:-mautic}'
-      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL}'
-      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL}'
+      MAUTIC_DB_USER: '${SERVICE_USER_MYSQL:-mautic}'
+      MAUTIC_DB_PASSWORD: '${SERVICE_PASSWORD_64_MYSQL:-mautic}'
       MAUTIC_MESSENGER_DSN_EMAIL: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
       MAUTIC_MESSENGER_DSN_HIT: 'amqp://${RABBITMQ_USER:-mautic}:${RABBITMQ_PASSWORD:-mautic}@rabbitmq:5672/${RABBITMQ_DEFAULT_VHOST:-mautic}/messages'
       # Worker counts
@@ -196,7 +206,9 @@ volumes:
     driver: local
   mautic-logs:
     driver: local
-  mautic-media:
+  mautic-media-files:
+    driver: local
+  mautic-media-images:
     driver: local
   mautic-cache:
     driver: local
