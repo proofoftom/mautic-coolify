@@ -182,7 +182,10 @@ RUN chmod +x /opt/mautic/cron/*.sh 2>/dev/null || true
 COPY supervisor/ /etc/supervisor/conf.d/
 
 # Set correct permissions (FIXED for Mautic 7.x structure)
-RUN chown -R www-data:www-data ${MAUTIC_ROOT} \
+RUN mkdir -p ${MAUTIC_ROOT}/docroot/media/files \
+    && mkdir -p ${MAUTIC_ROOT}/docroot/media/images \
+    && mkdir -p ${MAUTIC_ROOT}/config \
+    && chown -R www-data:www-data ${MAUTIC_ROOT} \
     && find ${MAUTIC_ROOT} -type d -exec chmod 755 {} + \
     && find ${MAUTIC_ROOT} -type f -exec chmod 644 {} + \
     && chmod -R 775 ${MAUTIC_ROOT}/var \
