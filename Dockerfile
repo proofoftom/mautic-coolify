@@ -126,18 +126,10 @@ RUN { \
 } > /etc/apache2/conf-available/reverse-proxy.conf \
     && a2enconf reverse-proxy
 
-# Configure Apache DocumentRoot for Mautic (CRITICAL FIX)
-RUN { \
-    echo '<VirtualHost *:80>'; \
-    echo '    DocumentRoot /var/www/html/docroot'; \
-    echo '    <Directory /var/www/html/docroot>'; \
-    echo '        AllowOverride All'; \
-    echo '        Require all granted'; \
-    echo '    </Directory>'; \
-    echo '</VirtualHost>'; \
-} > /etc/apache2/sites-available/mautic.conf \
-    && a2dissite 000-default.conf \
-    && a2ensite mautic.conf
+# Configure Apache DocumentRoot for Mautic using sed approach (recommended by official PHP Docker images)
+# This replaces the default DocumentRoot with /var/www/html/docroot in all Apache config files
+RUN sed -ri -e 's!/var/www/html!/var/www/html/docroot!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!/var/www/html/docroot/!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Create www-data user home directory
 RUN mkdir -p /var/www/.composer && chown -R www-data:www-data /var/www
