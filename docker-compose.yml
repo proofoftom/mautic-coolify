@@ -69,8 +69,8 @@ services:
     volumes:
       - 'mautic-config:/var/www/html/config:z'
       - 'mautic-logs:/var/www/html/var/logs:z'
-      - 'mautic-media-files:/var/www/html/docroot/media/files:z'
-      - 'mautic-media-images:/var/www/html/docroot/media/images:z'
+      - 'mautic-media-files:/var/www/html/media/files:z'
+      - 'mautic-media-images:/var/www/html/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       # Container role
@@ -132,8 +132,8 @@ services:
     volumes:
       - 'mautic-config:/var/www/html/config:z'
       - 'mautic-logs:/var/www/html/var/logs:z'
-      - 'mautic-media-files:/var/www/html/docroot/media/files:z'
-      - 'mautic-media-images:/var/www/html/docroot/media/images:z'
+      - 'mautic-media-files:/var/www/html/media/files:z'
+      - 'mautic-media-images:/var/www/html/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       DOCKER_MAUTIC_ROLE: 'mautic_cron'
@@ -171,8 +171,8 @@ services:
     volumes:
       - 'mautic-config:/var/www/html/config:z'
       - 'mautic-logs:/var/www/html/var/logs:z'
-      - 'mautic-media-files:/var/www/html/docroot/media/files:z'
-      - 'mautic-media-images:/var/www/html/docroot/media/images:z'
+      - 'mautic-media-files:/var/www/html/media/files:z'
+      - 'mautic-media-images:/var/www/html/media/images:z'
       - 'mautic-cache:/var/www/html/var/cache:z'
     environment:
       DOCKER_MAUTIC_ROLE: 'mautic_worker'

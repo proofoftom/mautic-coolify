@@ -26,7 +26,7 @@ ENV MAUTIC_VERSION=${MAUTIC_VERSION} \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_HOME=/tmp/composer \
     MAUTIC_ROOT=/var/www/html \
-    APACHE_DOCUMENT_ROOT=/var/www/html/docroot
+    APACHE_DOCUMENT_ROOT=/var/www/html
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -127,9 +127,9 @@ RUN { \
     && a2enconf reverse-proxy
 
 # Configure Apache DocumentRoot for Mautic using sed approach (recommended by official PHP Docker images)
-# This replaces the default DocumentRoot with /var/www/html/docroot in all Apache config files
-RUN sed -ri -e 's!/var/www/html!/var/www/html/docroot!g' /etc/apache2/sites-available/*.conf \
-    && sed -ri -e 's!/var/www/!/var/www/html/docroot/!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+# This replaces the default DocumentRoot with /var/www/html in all Apache config files
+RUN sed -ri -e 's!/var/www/html!/var/www/html!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!/var/www/html/!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Create www-data user home directory
 RUN mkdir -p /var/www/.composer && chown -R www-data:www-data /var/www
@@ -174,14 +174,14 @@ RUN chmod +x /opt/mautic/cron/*.sh 2>/dev/null || true
 COPY supervisor/ /etc/supervisor/conf.d/
 
 # Set correct permissions (FIXED for Mautic 7.x structure)
-RUN mkdir -p ${MAUTIC_ROOT}/docroot/media/files \
-    && mkdir -p ${MAUTIC_ROOT}/docroot/media/images \
+RUN mkdir -p ${MAUTIC_ROOT}/media/files \
+    && mkdir -p ${MAUTIC_ROOT}/media/images \
     && mkdir -p ${MAUTIC_ROOT}/config \
     && chown -R www-data:www-data ${MAUTIC_ROOT} \
     && find ${MAUTIC_ROOT} -type d -exec chmod 755 {} + \
     && find ${MAUTIC_ROOT} -type f -exec chmod 644 {} + \
     && chmod -R 775 ${MAUTIC_ROOT}/var \
-    && chmod -R 775 ${MAUTIC_ROOT}/docroot/media \
+    && chmod -R 775 ${MAUTIC_ROOT}/media \
     && chmod -R 775 ${MAUTIC_ROOT}/config
 
 # Copy entrypoint
@@ -192,7 +192,7 @@ RUN chmod +x /docker-entrypoint.sh
 EXPOSE 80
 
 # Define volumes for persistence (FIXED for Mautic 7.x structure)
-VOLUME ["${MAUTIC_ROOT}/config", "${MAUTIC_ROOT}/var/logs", "${MAUTIC_ROOT}/docroot/media/files", "${MAUTIC_ROOT}/docroot/media/images"]
+VOLUME ["${MAUTIC_ROOT}/config", "${MAUTIC_ROOT}/var/logs", "${MAUTIC_ROOT}/media/files", "${MAUTIC_ROOT}/media/images"]
 
 # Health check (IMPROVED with specific endpoint)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
